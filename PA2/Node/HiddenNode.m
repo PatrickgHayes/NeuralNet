@@ -1,44 +1,42 @@
-classdef HiddenNode < WorkNode
+classdef HiddenNode < handle
     %HIDDENNODE Summary of this class goes here
     %   Detailed explanation goes here
     properties
-        %inherits all its properties from WorkNode Abstract class
+        weights
+        activationFunc
     end
     
     methods
-        function obj = HiddenNode(actFunct, inputNodes, ...
-                                  numOfOutputs)
+        function obj = HiddenNode(actFunct, numInputs, numOutputs)
             if nargin > 0
-                obj.inputs = inputNodes;
-                obj.outputNodes = cell(numOfOutputs, 3);
                 obj.activationFunc = ActFuncEnum.getFunct(actFunct);
-                obj.weights = zeros(numOfOutputs,size(inputNodes,1) + 1);
-                obj.delta  = zeros(numOfOutputs, 1);
+                obj.weights = rand(numOutputs, numInputs + 1);
             end
+        end
+        
+        function wsDelta =updateWeights(obj, alpha, wsDelta, outVals, inputs)
+            derivOfActFunc = obj.activationFunc.derivOfActFunct(outVals);
+            delta = wsDelta .* derivOfActFunc;
+            deltaS = sum(delta, 1);
+            sumOfWeights = sum(obj.weights(:,1:end-1),1);
+            wsDelta = deltaS * sumOfWeights';
+            obj.weights = obj.weights + alpha * (delta * inputs');
+        end
+        
+        function outVals = calcOutput(obj, inVals)
+            outVals = obj.calcY(obj.calcA(inVals));
         end
     end
     
-    methods (Access = protected)
-        function calcDelta(obj) 
-            y = obj.getOutputs()
-            weightedDeltas = obj.getWeightedDeltas();
-            
-            for i = 1:size(obj.delta,1)
-                derivOfActFunc = obj.activationFunc.derivOfActFunct(y(i,1));
-                obj.delta(i,1) = derivOfActFunc * weightedDeltas(i,1);
-            end 
+    methods (Access = protected) 
+        
+        function a = calcA(obj, inputs)
+            a = obj.weights * inputs;
         end
         
-        function weightedDeltas = getWeightedDeltas(obj)
-            weightedDeltas = zeros(size(obj.outputNodes,1),1);
-            for i = 1:size(weightedDeltas,1)
-                outputNode = obj.outputNodes{i,3};
-                idx = obj.outputNodes{i,2};
-                weight = outputNode.getSumOfWeights(idx);
-                delta = outputNode.getDelta();
-                weightedDeltas(i,1) = weight * delta;
-            end
-        end
+        function y = calcY(obj, a)
+            y = obj.activationFunc.activationFunction(a);
+        end 
     end
 end
 

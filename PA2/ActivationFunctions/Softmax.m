@@ -10,16 +10,13 @@ classdef Softmax < ActivationFunction
             obj.Name = ActFuncEnum.Softmax;
         end
         
-        function result = activationFunction(~,a, allAs)
-            sumOfAllExpAs = 0;
-            for i = allAs
-                sumOfAllExpAs = sumOfAllExpAs + exp(i);
-            end
-            result = exp(a) / sumOfAllExpAs;
+        function result = activationFunction(~,a)
+            sumOfAllExpAs = exp(sum(a));
+            result = exp(a) ./ sumOfAllExpAs;
         end
         
         function yOut = derivOfActFunct(~, yIn)
-            yOut = yIn * (1 - yIn);
+            yOut = yIn .* (1 - yIn);
         end
     end
 end

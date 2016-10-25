@@ -6,7 +6,7 @@ classdef ActivationFunction < handle
     end
     
     methods (Abstract)
-        result = activationFunction(a, allAs)
+        result = activationFunction(a)
         yOut = derivOfActFunct(yIn)
     end
     

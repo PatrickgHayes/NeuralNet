@@ -1,50 +1,49 @@
-classdef NeuralNet
+classdef NeuralNet < handle
     properties 
-        inputArray % [n x 1] array of input values
-        hiddenNodes % {hidUnits x numLayers} cell of hidden nodes
-        hiddenOutputs % [hiddenUnits x hiddenLayers] array of outputs
-        outputNodes % {m x 1} cell of output nodes
-        outputValues % [outputClasses x 1] array of output values
+        hidNodes % {1 x numLayers} cell of hidden nodes
+        hidVals % [hiddenNodes x hiddenLayers] array of output values
+        hid_wsDelta % [hiddenNodes x hiddenLayers] 
+                     % array of deltas and sum of weights for each
+                     % hiddenNode on the layer below. Don't compute for the
+                     % first hidden layer
+        outNode % a single node that calutlates the output of the Neural Net
+        outVals % a [m x 1] array of outputVals
+        out_wsDelta % [szLayerBlw x 1 ] array of output
+                           % deltas and sum of weights for each hiddenNode
+                           % on the layer below
         alpha % Learning rate
     end
     methods
-        function teachPattern(obj, pattern, targetLabel)
-            disp('Start')
-            disp('Set Inputs')
-            tStart = tic;
-            obj.setInputVals(pattern);
-            disp('Done')
-            timeElapsed = toc(tStart)
-            disp('Set Targets')
-            tStart = tic;
-            obj.setTarget(targetLabel);
-            disp('Done')
-            timeElapsed = toc(tStart)
-            disp('CalcOutput')
-            tStart = tic;
-            obj.calcOutput();
-            disp('Done')
-            timeElapsed = toc(tStart)
-            disp('UpdateWeights')
-            tStart = tic;
-            obj.updateWeights();
-            disp('Finish')
-            timeElapsed = toc(tStart)
-        end
-        
         function obj = NeuralNet(numOfInputs, numOfOutputs, ...
-                                 numOfHiddenUnits, numOfHiddenLayers, ...
+                                 numOfHiddenUnits, numOfHidLayers, ...
                                  actFunct, alpha, beta, lamda)
-             obj.inputNodes = cell(numOfInputs, 1);
-             obj.hiddenNodes = cell(numOfHiddenUnits, numOfHiddenLayers);
-             obj.outputNodes = cell(numOfOutputs, 1);
+                             
+             obj.hidVals = zeros(numOfHiddenUnits, numOfHidLayers);
+             obj.hid_wsDelta = zeros(numOfHiddenUnits, numOfHidLayers);
+             if numOfHidLayers > 0
+                 inputsToOutNode = numOfHiddenUnits;
+             else
+                 inputsToOutNode = numOfInputs;
+             end
+             obj.outNode = OutputNode(ActFuncEnum.Softmax, ...
+                                      inputsToOutNode, numOfOutputs);
+             obj.outVals = zeros(numOfOutputs, 1);
+             obj.out_wsDelta = zeros(numOfHiddenUnits, 1);
              obj.alpha = alpha;
+             obj.hidNodes = cell(1, numOfHidLayers);
              
-             
-             obj = obj.buildNeuralNet(numOfInputs, numOfOutputs, ...
-                                 numOfHiddenUnits, numOfHiddenLayers, ...
-                                 actFunct, beta, lamda);
-         
+             for i = 1:numOfHidLayers
+                 if i == 1
+                     nIn = numOfInputs;
+                 else
+                     nIn = numOfHiddenUnits;
+                 end
+                 
+                 
+                 nOut = numOfHiddenUnits;
+                 
+                 obj.hidNodes{1,i} = HiddenNode(actFunct, nIn, nOut);
+             end
         end
         
         function [errorRates] = teach(obj, patterns, labels)
@@ -91,6 +90,8 @@ classdef NeuralNet
             errorRates([finalEpoch, finalEpoch; errorRates]);
         end
         
+        
+        
         function errorRate = calcErrorRate(obj, patterns, labels)
             numOfSuccess = 0;
             
@@ -99,125 +100,37 @@ classdef NeuralNet
                                                patterns(:,i), labels(i,1));
             end
             
+            disp(numOfSucces
+            
             errorRate = (size(labels,1) - numOfSuccess) / size(labels,1);
             
         end
         
+        function teachPattern(obj, pattern, targetLabel)
+            disp('Start')
+            bPattern = [pattern; 1];
+            hotTarget = label2OneHot(targetLabel);
+            
+            disp('CalcOutput')
+            tStart = tic;
+            obj.calcOutput(bPattern);
+            disp('Done')
+            timeElapsed = toc(tStart)
+            
+            disp('UpdateWeights')
+            tStart = tic;
+            obj.updateWeights(bPattern, hotTarget);
+            disp('Finis')
+            timeElapsed = toc(tStart)
+        end
+        
     end
     
-    methods (Access = private) 
-        function obj = buildNeuralNet(obj, numOfInputs, numOfOutputs, ...
-                                numOfHiddenUnits, numOfHiddenLayers, ...
-                                actFunct, beta, lamda)
-                            
-            obj = obj.buildInputNodes(numOfInputs, numOfHiddenUnits);
-            
-             
-            obj = obj.buildHiddenNodes(numOfInputs, numOfOutputs, ...
-                                 numOfHiddenUnits, numOfHiddenLayers, ...
-                                 actFunct, beta, lamda);
-                             
-            obj = obj.buildOutputNodes(numOfOutputs, numOfHiddenUnits, ...
-                                 numOfHiddenLayers, beta, lamda);
-        end
-        
-        function obj = buildInputNodes(obj, numOfInputs, numOfHiddenUnits)
-             %build the neural net from bottom to top
-             %first create all the input nodes
-             for i = 1:numOfInputs
-                 inputNode = InputNode(numOfHiddenUnits);
-                 obj.inputNodes{i, 1} = inputNode;
-             end
-        end
-        
-        function obj = buildHiddenNodes(obj, numOfInputs, numOfOutputs, ...
-                                numOfHiddenUnits, numOfHiddenLayers, ...
-                                actFunct, beta, lamda)
-             %build the first layer of hidden node and connect them to the
-             %input layer
-             for i = 1:numOfHiddenUnits
-                 if 1 ~= numOfHiddenLayers
-                     numOfHiddenOutputs = numOfHiddenUnits;
-                 else
-                     numOfHiddenOutputs = numOfOutputs;
-                 end
-                 tempHidNode = HiddenNode(actFunct, obj.inputNodes, ...
-                                        numOfHiddenOutputs);
-                 if (beta == 0 && lamda == 0)
-                     hidNode = tempHidNode;
-                 elseif beta > 0
-                     hidNode = HiddenMomentumNode(tempHidNode, beta);
-                 elseif lamda > 0
-                     hidNode = HiddenRegularizedNode(tempHidNode, lamda);
-                 end
-                 obj.hiddenNodes{i, 1} = hidNode;
-                                    
-                 %Connect all the input units to this node
-                 for j = 1:numOfInputs
-                     prevLayerNode = obj.inputNodes{j,1};
-                     prevLayerNode.setOutputNode(i, j, hidNode);
-                 end
-             end
-             
-             %build the rest of the layers of hidden nodes and connect them
-             %to the previous layer
-             for k = 2:numOfHiddenLayers
-                 for i = 1:numOfHiddenUnits
-                     if k ~= numOfHiddenLayers
-                        numOfHiddenOutputs = numOfHiddenUnits;
-                     else
-                        numOfHiddenOutputs = numOfOutputs;
-                     end
-                     tempHidNode = HiddenNode(actFunct, ...
-                                          obj.hiddenNodes(:, k-1), ...
-                                          numOfHiddenOutputs);
-                     if (beta == 0 && lamda == 0)
-                        hidNode = tempHidNode;
-                     elseif beta > 0
-                        hidNode = HiddenMomentumNode(tempHidNode, beta);
-                     elseif lamda > 0
-                        hidNode = HiddenRegularizedNode(tempHidNode, lamda);
-                     end
-                     
-                     obj.hiddenNodes{i, k} = hidNode;
-                                      
-                     %Connect all the nodes in the layer before to this node                 
-                     for j = 1:numOfHiddenUnits
-                         prevLayerNode = obj.hiddenNodes{j, k-1};
-                         prevLayerNode.setOutputNode(i, j, hidNode);
-                     end
-                 end
-             end
-        end
-        
-        function obj = buildOutputNodes(obj, numOfOutputs, numOfHiddenUnits, ...
-                                  numOfHiddenLayers, beta, lamda)  
-             %build the outputlayer and connect it to the top hidden layer
-             for i = 1:numOfOutputs
-                 tempOutNode = OutputNode(ActFuncEnum.Softmax, ...
-                                      obj.hiddenNodes(:,numOfHiddenLayers));
-                 if (beta == 0 && lamda == 0)
-                     outNode = tempOutNode;
-                 elseif beta > 0
-                     outNode = OutputMomentumNode(tempOutNode, beta);
-                 elseif lamda > 0
-                     outNode = OutputRegularizedNode(tempOutNode, lamda);
-                 end  
-                 
-                 obj.outputNodes{i,1} = outNode;
-                 
-                 for j = 1:numOfHiddenUnits
-                     prevLayerNode = obj.hiddenNodes{j, numOfHiddenLayers};
-                     prevLayerNode.setOutputNode(i, j, outNode);
-                 end
-             end 
-        end
-        
+    methods (Access = private)
         function  success = determineSuccess(obj, pattern, targetLabel)
-            obj.setInputVals(pattern);
-            obj.calcOutput();
-            output = obj.getOutput();
-            outputLabel = oneHot2Label(output);
+            bPattern = [pattern;1];
+            obj.calcOutput(bPattern);
+            outputLabel = oneHot2Label(obj.outVals);
             if outputLabel == targetLabel
                 success = true;
             else
@@ -225,68 +138,70 @@ classdef NeuralNet
             end
         end
         
-        
-        
         function teachEpoch(obj, patterns, labels)
             shuffle = randperm(size(labels,1));
             for i = 1:size(labels,1)
-                disp(i)
                 idx = shuffle(1, i);
                 obj.teachPattern(patterns(:,idx), labels(idx,1));
             end
-            disp('Done with one epoch');
+            
         end
         
-        function updateWeights(obj)
-            for i = 1:size(obj.outputNodes,1)
-                outNode = obj.outputNodes{i,1};
-                outNode.updateWeights(obj.alpha);
+        
+        
+        %must have called calcOutput and calcDeltas first
+        function updateWeights(obj, pattern, hotTarget)
+            hidLayers = size(obj.hidNodes, 2);
+            if hidLayers == 0
+                nIn = pattern;
+            else
+                nIn = [obj.hidVals(:,hidLayers);1];
+            end
+     
+            obj.out_wsDelta = obj.outNode.updateWeights(nIn, ...
+                                       hotTarget, obj.outVals, obj.alpha);
+            
+            
+            for i = hidLayers:-1:1
+                hidNode = obj.hidNodes{i,1};
+                if i == hidLayers
+                    pDeltas = obj.out_wsDelta;
+                else
+                    pDeltas = obj.hid_wsDelta(:,i+1);
+                end
+                out = obj.hidVals(:,i);
+                if i == 1
+                    in = pattern;
+                    hidNode.updateWeights(obj.alpha, pDeltas, out, in);
+                else
+                    in = [obj.hidVals(:,i-1);1];
+                    obj.hid_wsDelta(:,i) =  ...
+                        hidNode.updateWeights(obj.alpha, pDeltas, out, in);
+                end
+            end   
+        end
+        
+        function calcOutput(obj, pattern)    
+            hidLayers = size(obj.hidNodes, 2);
+            
+            for i = 1:hidLayers
+                if i == 1
+                    in = pattern;
+                else
+                    in = [obj.hidVals(:, i-1);1];
+                end
+                hidNode = obj.hidNodes{1,i};
+                obj.hidVals(:, i) = hidNode.calcOutput(in);
             end
             
-            for i = size(obj.hiddenNodes, 2):-1:1
-                for j = 1:size(obj.hiddenNodes,1)
-                    hidNode = obj.hiddenNodes{j,i};
-                    hidNode.updateWeights(obj.alpha);
-                end
-            end
-        end
-        
-        function calcOutput(obj)
-            for i = 1:size(obj.hiddenNodes, 2)
-                for j = 1:size(obj.hiddenNodes,1)
-                    hidNode = obj.hiddenNodes{j,i};
-                    hidNode.calcOutput();
-                end
+            if hidLayers == 0
+                in = pattern;
+            else
+                in = [obj.hidVals(:, hidLayers);1];
             end
             
-            for i = 1:size(obj.outputNodes,1)
-                outNode = obj.outputNodes{i,1};
-                outNode.calcOutput();
-            end
+            obj.outVals = obj.outNode.calcOutput(in);
         end
-        
-        % Takes a [n x 1] vector of ints and distributes them to the 
-        % inputArray.
-        function obj = setInputVals(obj, inputVals)
-            obj.inputArray = inputVals;
-        end
-        
-        % Retrieves the one hot encoded output from outputNodes
-        function outputVals = getOutput(obj)
-            outputVals = zeros(size(obj.outputNodes,1),1);
-            for i = 1:size(outputVals,1)
-                outputNode = obj.outputNodes{i,1};
-                outputVals(i,1) = outputNode.getOutputs();
-            end
-        end
-        
-        function setTarget(obj, targetLabel)
-            target = label2OneHot(targetLabel);
-            for i = 1:size(obj.outputNodes)
-                outputNode = obj.outputNodes{i,1};
-                outputNode.setTarget(target(i,1));
-            end
-        end  
         
         function [outputCell] = splitPatterns(~, patterns, labels)
               

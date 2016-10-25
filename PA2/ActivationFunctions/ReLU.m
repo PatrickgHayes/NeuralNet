@@ -9,20 +9,12 @@ classdef ReLU < ActivationFunction
             obj.Name = ActFuncEnum.ReLU;
         end
             
-        function result = activationFunction(~, a, ~)
-            if a > 0
-                result = a;
-            else 
-                result = 0;
-            end
+        function result = activationFunction(~, a)
+            result = (a > 0) .* a;
         end
         
         function yOut = derivOfActFunct(~, yIn)
-            if yIn <= 0
-                yOut = 0;
-            else
-                yOut = 1;
-            end
+            yOut = yIn > 0;
         end
     end
 end

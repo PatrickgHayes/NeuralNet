@@ -10,12 +10,12 @@ classdef Sigmoid < ActivationFunction
             obj.Name = ActFuncEnum.Sigmoid;
         end
             
-        function result = activationFunction(~, a, ~)
-            result = 1 / (1 + exp(-a));
+        function result = activationFunction(~, a)
+            result = 1 ./ (1 + exp(-a));
         end
         
         function yOut = derivOfActFunct(~, yIn)
-            yOut = yIn * (1 - yIn);
+            yOut = yIn .* (1 - yIn);
         end
     end
     

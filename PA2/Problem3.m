@@ -22,14 +22,14 @@ disp('Done Building Neural Net');
 
 plainNet.teachPattern(images(:,1), labels(1,1));
 
-% errorRatesAndIdx = plainNet.teach(images, labels);
-% 
-% errorRates = errorRatesAndIdx(2:end,:);
-% finalIdx = errorratesAndIdx(1,1);
-% 
-% Grapher.graphValidationErrorRate(errorRates, finalIdx, 'Test');
+errorRatesAndIdx = plainNet.teach(images, labels);
+ 
+errorRates = errorRatesAndIdx(2:end,:);
+finalIdx = errorRatesAndIdx(1,1);
+Grapher.graphValidationErrorRate(errorRates, finalIdx, 'Test');
+
 disp('Calc Error Rate')
-testErrorRate = plainNet.calcErrorRate(testImages, testLabels);
+testErrorRate = plainNet.calcErrorRate(testImages, testLabels)
 disp('Finish')
 end
 

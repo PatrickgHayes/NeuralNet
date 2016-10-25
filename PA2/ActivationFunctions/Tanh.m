@@ -10,13 +10,13 @@ classdef Tanh < ActivationFunction
             obj.Name = ActFuncEnum.Tanh;
         end
             
-        function result = activationFunction(~, a, ~)
+        function result = activationFunction(~, a)
             result = (exp(a) - exp(-a)) ...
-                     / (exp(a) + exp(-a));
+                     ./ (exp(a) + exp(-a));
         end
         
         function yOut = derivOfActFunct(~, yIn)
-            yOut = 1 - (yIn * yIn);
+            yOut = 1 - (yIn .* yIn);
         end
     end
     
