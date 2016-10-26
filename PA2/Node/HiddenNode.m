@@ -10,17 +10,24 @@ classdef HiddenNode < handle
         function obj = HiddenNode(actFunct, numInputs, numOutputs)
             if nargin > 0
                 obj.activationFunc = ActFuncEnum.getFunct(actFunct);
-                obj.weights = rand(numOutputs, numInputs + 1);
+                obj.weights = (1/numInputs) * rand(numOutputs, numInputs + 1);
             end
         end
         
-        function wsDelta =updateWeights(obj, alpha, wsDelta, outVals, inputs)
+        function wsDelta = updateWeights(obj, alpha, wsDelta, outVals, inputs)
             derivOfActFunc = obj.activationFunc.derivOfActFunct(outVals);
             delta = wsDelta .* derivOfActFunc;
-            deltaS = sum(delta, 1);
-            sumOfWeights = sum(obj.weights(:,1:end-1),1);
-            wsDelta = deltaS * sumOfWeights';
+            deltaWeights = bsxfun(@times, delta, obj.weights(:,1:end-1));
+            wsDelta = sum(deltaWeights,1)';
             obj.weights = obj.weights + alpha * (delta * inputs');
+        end
+        
+        function aproxWeightInc(obj, row, col, eps)
+            obj.weights(row, col) = obj.weights(row, col) + eps;
+        end
+        
+        function aproxWeightsDec(obj, row, col, eps)
+            obj.weights(row, col) = obj.weights(row, col) - eps;
         end
         
         function outVals = calcOutput(obj, inVals)

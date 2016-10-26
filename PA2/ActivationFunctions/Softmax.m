@@ -11,7 +11,7 @@ classdef Softmax < ActivationFunction
         end
         
         function result = activationFunction(~,a)
-            sumOfAllExpAs = exp(sum(a));
+            sumOfAllExpAs = sum(exp(a));
             result = exp(a) ./ sumOfAllExpAs;
         end
         

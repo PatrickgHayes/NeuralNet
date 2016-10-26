@@ -12,7 +12,7 @@ classdef OutputNode < handle
         function obj = OutputNode(actFunct, numInputs, numOutputs)
             if nargin >0
                 obj.activationFunc = ActFuncEnum.getFunct(actFunct);
-                obj.weights = rand(numOutputs, numInputs + 1);
+                obj.weights = (1/numInputs) * rand(numOutputs, numInputs + 1);
             end
         end
           
@@ -20,9 +20,8 @@ classdef OutputNode < handle
                                         outVals, alpha)
                            
             delta = (tarVals - outVals);
-            deltaS = sum(delta,1);
-            sumOfWeights = sum(obj.weights(:,1:end-1),1);
-            wsDelta = deltaS * sumOfWeights';
+            deltaWeights = bsxfun(@times, delta, obj.weights(:,1:end-1));
+            wsDelta = sum(deltaWeights,1)';
             obj.weights = obj.weights + alpha * delta * inputs';
             
         end

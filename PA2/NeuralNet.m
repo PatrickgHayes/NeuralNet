@@ -28,7 +28,7 @@ classdef NeuralNet < handle
              obj.outNode = OutputNode(ActFuncEnum.Softmax, ...
                                       inputsToOutNode, numOfOutputs);
              obj.outVals = zeros(numOfOutputs, 1);
-             obj.out_wsDelta = zeros(numOfHiddenUnits, 1);
+             obj.out_wsDelta = zeros(inputsToOutNode, 1);
              obj.alpha = alpha;
              obj.hidNodes = cell(1, numOfHidLayers);
              
@@ -46,6 +46,10 @@ classdef NeuralNet < handle
              end
         end
         
+        function setLearningRate(obj, alpha)
+            obj.alpha = alpha;
+        end
+        
         function [errorRates] = teach(obj, patterns, labels)
             mSize = 10;
             mIncreaseSize = 2;
@@ -55,13 +59,12 @@ classdef NeuralNet < handle
             minError = 1;
             minErrorEpochIdx = 0;
             split = obj.splitPatterns(patterns, labels);
-            disp('Done Splitting Trainning data')
             validationPatterns = split{1};
             validationLabels = split{2};
             trainningPatterns = split{3};
             trainningLabels = split{4};
             
-            while epochIdx - minErrorEpochIdx < 5
+            while epochIdx - minErrorEpochIdx < 3
                 %increase the size of the array if it is full
                 if (epochIdx >= mSize) 
                     mSize = mSize * mIncreaseSize;
@@ -77,6 +80,8 @@ classdef NeuralNet < handle
                 if validationErrorRate < minError
                     minError = validationErrorRate;
                     minErrorEpochIdx = epochIdx;
+                else 
+                    obj.setLearningRate(obj.alpha * .5);
                 end
                 
                 errorRates(epochIdx,1) = trainningErrorRate;
@@ -90,6 +95,19 @@ classdef NeuralNet < handle
             errorRates = [finalEpoch-1, finalEpoch; errorRates];
         end
         
+        function [gTester] = testGradients(obj, patterns, labels)
+            gTester = GradientTester();
+                     
+            for i = 1:size(labels,1)   
+                obj.testPattern(gTester, patterns(:,i), labels(i,1));                
+            end
+        end
+        
+        function testPattern(obj, gtester, pattern, targetLabel)
+            bPattern = [pattern; 1];
+            hotTarget = label2OneHot(targetLabel);
+            obj.calcOutput(bPattern);
+        end
         
         
         function errorRate = calcErrorRate(obj, patterns, labels)
@@ -104,6 +122,12 @@ classdef NeuralNet < handle
             
         end
         
+        
+            
+        
+        
+           
+  %~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~      
         function teachPattern(obj, pattern, targetLabel)
 %             disp('Start')
             bPattern = [pattern; 1];
@@ -122,32 +146,29 @@ classdef NeuralNet < handle
 %             timeElapsed = toc(tStart)
         end
         
-    end
-    
-    methods (Access = private)
-        function  success = determineSuccess(obj, pattern, targetLabel)
-            bPattern = [pattern;1];
-            obj.calcOutput(bPattern);
-            outputLabel = oneHot2Label(obj.outVals);
-            if outputLabel == targetLabel
-                success = true;
-            else
-                success = false;
-            end
-        end
-        
-        function teachEpoch(obj, patterns, labels)
-            shuffle = randperm(size(labels,1));
-            for i = 1:size(labels,1)
-                idx = shuffle(1, i);
-                obj.teachPattern(patterns(:,idx), labels(idx,1));
+        function calcOutput(obj, pattern)    
+            hidLayers = size(obj.hidNodes, 2);
+            
+            for i = 1:hidLayers
+                if i == 1
+                    in = pattern;
+                else
+                    in = [obj.hidVals(:, i-1);1];
+                end
+                hidNode = obj.hidNodes{1,i};
+                obj.hidVals(:, i) = hidNode.calcOutput(in);
             end
             
+            if hidLayers == 0
+                in = pattern;
+            else
+                in = [obj.hidVals(:, hidLayers);1];
+            end
+            
+            obj.outVals = obj.outNode.calcOutput(in);
         end
         
-        
-        
-        %must have called calcOutput and calcDeltas first
+        %must have called calcOutput first
         function updateWeights(obj, pattern, hotTarget)
             hidLayers = size(obj.hidNodes, 2);
             if hidLayers == 0
@@ -179,27 +200,45 @@ classdef NeuralNet < handle
             end   
         end
         
-        function calcOutput(obj, pattern)    
-            hidLayers = size(obj.hidNodes, 2);
-            
-            for i = 1:hidLayers
-                if i == 1
-                    in = pattern;
-                else
-                    in = [obj.hidVals(:, i-1);1];
-                end
-                hidNode = obj.hidNodes{1,i};
-                obj.hidVals(:, i) = hidNode.calcOutput(in);
+        function teachEpoch(obj, patterns, labels)
+            shuffle = randperm(size(labels,1));
+            for i = 1:size(labels,1)
+                idx = shuffle(1, i);
+                obj.teachPattern(patterns(:,idx), labels(idx,1));
             end
             
-            if hidLayers == 0
-                in = pattern;
-            else
-                in = [obj.hidVals(:, hidLayers);1];
-            end
-            
-            obj.outVals = obj.outNode.calcOutput(in);
         end
+        
+        function err = calcAproxError(obj, pattern, label)
+            obj.calcOutput(pattern);
+            out = obj.outVals;
+            tarVals = label2OneHot(label);
+            err = sum(tarVals .* log(out));
+        end
+        
+    end
+    
+    
+    
+    methods (Access = private)
+        function  success = determineSuccess(obj, pattern, targetLabel)
+            bPattern = [pattern;1];
+            obj.calcOutput(bPattern);
+            outputLabel = oneHot2Label(obj.outVals);
+            if outputLabel == targetLabel
+                success = true;
+            else
+                success = false;
+            end
+        end
+        
+        
+        
+        
+        
+        
+        
+        
         
         function [outputCell] = splitPatterns(~, patterns, labels)
               
