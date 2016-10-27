@@ -15,14 +15,14 @@ classdef MomentumNode < handle
             obj.beta = beta;
         end
         
-        function updateWeights(obj, work_node, alpha)
+        function wsDelta = updateWeights(obj, work_node, alpha, tar, out, in)
             storeOldWeights = work_node.weights;
-            work_node.updateWeights(alpha);
+            wsDelta = work_node.updateWeights(alpha, tar, out, in);
             
             if obj.first_update == false
                 weightDiffs = work_node.weights - obj.prev_weights;
                 work_node.weights = work_node.weights ...
-                                        + ((alpha * obj.beta) * weightDiffs);
+                                        - obj.beta * weightDiffs;
             end
             
             obj.prev_weights = storeOldWeights;

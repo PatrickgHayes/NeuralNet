@@ -10,9 +10,9 @@ classdef RegularizedNode < handle
             obj.lamda = lamda;
         end
         
-        function updateWeights(obj, work_node, alpha)
+        function wsDelta = updateWeights(obj, work_node, alpha, tar, out, in)
             regularization = (alpha * obj.lamda * work_node.weights);
-            work_node.updateWeights(alpha);
+            wsDelta = work_node.updateWeights(alpha, tar, out,in);
             work_node.weights = work_node.weights - regularization;
         end
     end

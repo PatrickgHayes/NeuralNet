@@ -16,8 +16,8 @@ classdef OutputNode < handle
             end
         end
           
-        function wsDelta = updateWeights(obj, inputs, tarVals, ...
-                                        outVals, alpha)
+        function wsDelta = updateWeights(obj, alpha, tarVals, outVals, ...
+                                        inputs)
                            
             delta = (tarVals - outVals);
             deltaWeights = bsxfun(@times, delta, obj.weights(:,1:end-1));
@@ -26,8 +26,31 @@ classdef OutputNode < handle
             
         end
         
+        function wsDelta = updateWeightsTest(obj, gTester, alpha, ...
+                                             tarVals, outVals, inputs)
+            delta = (tarVals - outVals);
+            deltaWeights = bsxfun(@times, delta, obj.weights(:,1:end-1));
+            wsDelta = sum(deltaWeights,1)';
+            obj.weights = obj.weights + alpha * delta * inputs';
+            
+            dev = delta * inputs';
+            for i = 1:size(dev,1)
+                for j = 1:size(dev,2)
+                    gTester.addDev(dev(i,j));
+                end
+            end
+        end
+        
         function outVals = calcOutput(obj, inVals)
             outVals = obj.calcY(obj.calcA(inVals));
+        end
+        
+        function aproxWeightInc(obj, row, col, eps)
+            obj.weights(row, col) = obj.weights(row, col) + eps;
+        end
+        
+        function aproxWeightDec(obj, row, col, eps)
+            obj.weights(row, col) = obj.weights(row, col) - eps;
         end
     end
     

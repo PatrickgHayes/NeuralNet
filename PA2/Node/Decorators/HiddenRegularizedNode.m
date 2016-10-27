@@ -6,14 +6,14 @@ classdef HiddenRegularizedNode < HiddenNodeDecorator & RegularizedNode
     end
     
     methods
-        function obj = HiddenRegularizedNode(workNode, lamda)
+        function obj = HiddenRegularizedNode(hidNode, lamda)
             obj = obj@RegularizedNode(lamda);
-            obj.work_node = workNode;
+            obj.hid_node = hidNode;
         end
         
         %overide
-        function updateWeights(obj, alpha)
-            updateWeights@Regularized(obj, obj.work_node, alpha);
+        function wsDelta = updateWeights(obj, alpha, tar, out, in)
+            wsDelta = updateWeights@RegularizedNode(obj, obj.hid_node, alpha, tar,out, in);
         end
     end
     

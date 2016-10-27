@@ -6,14 +6,14 @@ classdef HiddenMomentumNode < HiddenNodeDecorator & MomentumNode
     end
     
     methods
-        function obj = HiddenMomentumNode(workNode, beta)
-            obj = obj@MomentumNode(workNode, beta);
-            obj.work_node = workNode;
+        function obj = HiddenMomentumNode(hidNode, beta)
+            obj = obj@MomentumNode(hidNode, beta);
+            obj.hid_node = hidNode;
         end
         
         %override
-        function updateWeights(obj, alpha)
-            updateWeights@MomentumNode(obj, obj.work_node, alpha);
+        function wsDelta = updateWeights(obj, alpha, tar, out, in)
+            wsDelta = updateWeights@MomentumNode(obj, obj.hid_node, alpha, tar, out, in);
         end
     end
 end

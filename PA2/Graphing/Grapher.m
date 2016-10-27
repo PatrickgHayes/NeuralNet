@@ -24,9 +24,9 @@ classdef Grapher
         
         function graphActFunctErrorRates(sigmoidError, tanhError, ...
                                          reluError, finalIdxs)
-            sigmoidError = sigmoidError(1:finalIdxs(1), 1);
-            tanhError = tanhError(1:finalIdxs(2), 1);
-            reluError = reluError(1:finalIdxs(3), 1);
+            sigmoidError = sigmoidError(1:finalIdxs(1), 2);
+            tanhError = tanhError(1:finalIdxs(2), 2);
+            reluError = reluError(1:finalIdxs(3), 2);
             epochsSigmoid = 1:1:finalIdxs(1);
             epochsTanh = 1:1:finalIdxs(2);
             epochsRelu = 1:1:finalIdxs(3);
@@ -42,6 +42,27 @@ classdef Grapher
             title('Compare Hidden Unit Activation Functions');
             hold off;
         end 
+        
+        function compareTopology(firstErr, secondErr, ...
+                                 firstIdx, secIdx, ...
+                                 firstLabel, secondLabel, ...
+                                 iTitle)
+            firstErr = firstErr(1:firstIdx, 2);
+            secondErr = secondErr(1:secIdx, 2);
+            epochsFirst = 1:1:firstIdx;
+            epochsSec = 1:1:secIdx;
+            h = zeros(2,1);
+            figure
+            hold all;
+            h(1) = plot(epochsFirst, firstErr);
+            h(2) = plot(epochsSec, secondErr);
+            xlabel('Epochs');
+            ylabel('Error Rate (Misclassified/#Patterns)');
+            legend(h, firstLabel, secondLabel);
+            title(iTitle);
+            hold off;
+        end
+            
         
         
     end

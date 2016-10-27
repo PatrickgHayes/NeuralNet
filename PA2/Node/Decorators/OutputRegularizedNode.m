@@ -6,14 +6,14 @@ classdef OutputRegularizedNode < OutputNodeDecorator & RegularizedNode
     end
     
     methods
-        function obj = OutputRegularizedNode(workNode, lamda)
+        function obj = OutputRegularizedNode(outNode, lamda)
             obj = obj@RegularizedNode(lamda);
-            obj.work_node = workNode;
+            obj.out_node = outNode;
         end
         
         %overide
-        function updateWeights(obj, alpha)
-            updateWeights@Regularized(obj, obj.work_node, alpha);
+        function wsDelta = updateWeights(obj, alpha, tar, out, in)
+           wsDelta = updateWeights@RegularizedNode(obj, obj.out_node, alpha, tar, out, in);
         end
     end 
 end

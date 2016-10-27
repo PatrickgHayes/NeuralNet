@@ -25,8 +25,11 @@ classdef NeuralNet < handle
              else
                  inputsToOutNode = numOfInputs;
              end
+             
+            
              obj.outNode = OutputNode(ActFuncEnum.Softmax, ...
                                       inputsToOutNode, numOfOutputs);
+             
              obj.outVals = zeros(numOfOutputs, 1);
              obj.out_wsDelta = zeros(inputsToOutNode, 1);
              obj.alpha = alpha;
@@ -42,7 +45,13 @@ classdef NeuralNet < handle
                  
                  nOut = numOfHiddenUnits;
                  
-                 obj.hidNodes{1,i} = HiddenNode(actFunct, nIn, nOut);
+                 hidNode = HiddenNode(actFunct, nIn, nOut);
+                 if beta > 0
+                    hidNode = HiddenMomentumNode(hidNode, beta);
+                 elseif lamda > 0
+                    hidNode = HiddenRegularizedNode(hidNode, lamda);
+                 end
+                 obj.hidNodes{1,i} = hidNode;
              end
         end
         
@@ -95,18 +104,95 @@ classdef NeuralNet < handle
             errorRates = [finalEpoch-1, finalEpoch; errorRates];
         end
         
-        function [gTester] = testGradients(obj, patterns, labels)
-            gTester = GradientTester();
+        function [gTester] = testGradients(obj, patterns, labels, eps)
+            gTester = GradientTester(eps);
                      
             for i = 1:size(labels,1)   
                 obj.testPattern(gTester, patterns(:,i), labels(i,1));                
             end
+            
+            gTester.graph();
         end
         
         function testPattern(obj, gtester, pattern, targetLabel)
             bPattern = [pattern; 1];
             hotTarget = label2OneHot(targetLabel);
-            obj.calcOutput(bPattern);
+            
+            
+            %Estimate all the gradients for the output nodes weights
+              for i = 1:size(obj.outNode.weights,1)
+                  for j = 1:size(obj.outNode.weights,2)
+                      obj.outNode.aproxWeightInc(i,j, gtester.eps);
+                      inc = obj.calcAproxError(bPattern, hotTarget);
+                      obj.outNode.aproxWeightDec(i,j, gtester.eps);
+                      dec = obj.calcAproxError(bPattern, hotTarget);
+                      obj.outNode.aproxWeightInc(i,j, gtester.eps);
+                      gtester.addEst(inc,dec);
+                  end
+              end
+            
+            
+            %Estimate all the gradients for the hidden nodes weights
+             for k = size(obj.hidNodes,2):-1:1
+                 hidNode = obj.hidNodes{1,k};
+                 for i = 1:size(hidNode.weights,1)
+                     for j = 1:size(hidNode.weights,2)
+                         hidNode.aproxWeightInc(i,j, gtester.eps);
+                         inc = obj.calcAproxError(bPattern, hotTarget);
+                         hidNode.aproxWeightDec(i,j, gtester.eps);
+                         dec = obj.calcAproxError(bPattern, hotTarget);
+                         hidNode.aproxWeightInc(i,j, gtester.eps);
+                         gtester.addEst(inc,dec);
+                     end
+                 end
+             end
+            
+            %Calc all the gradients 
+           obj.calcOutput(bPattern);
+           obj.updateWeightsTest(gtester, bPattern, hotTarget);
+        end
+        
+        function updateWeightsTest(obj, gTester, pattern, hotTarget)
+            hidLayers = size(obj.hidNodes, 2);
+            if hidLayers == 0
+                nIn = pattern;
+            else
+                nIn = [obj.hidVals(:,hidLayers);1];
+            end
+            
+            obj.out_wsDelta = obj.outNode.updateWeightsTest(gTester, obj.alpha, ...
+                                       hotTarget, obj.outVals, nIn);
+            
+            disp(gTester.dev_idx)
+         
+             for i = hidLayers:-1:1
+                 hidNode = obj.hidNodes{1,i};
+                 if i == hidLayers
+                     pDeltas = obj.out_wsDelta;
+                 else
+                     pDeltas = obj.hid_wsDelta(:,i+1);
+                 end
+                 out = obj.hidVals(:,i);
+                 if i == 1
+                     in = pattern;
+                     
+                     hidNode.updateWeightsTest(gTester, obj.alpha,...
+                                               pDeltas, out, in);
+                     
+                 else
+                     in = [obj.hidVals(:,i-1);1];
+                     obj.hid_wsDelta(:,i) =  ...
+                         hidNode.updateWeightsTest(gTester, ...
+                                               obj.alpha, pDeltas, out, in);
+                    
+                 end
+             end   
+        end
+        
+        function err = calcAproxError(obj, pattern, hotTarget)
+            obj.calcOutput(pattern);
+            out = obj.outVals;
+            err = sum(hotTarget .* log(out));
         end
         
         
@@ -177,12 +263,12 @@ classdef NeuralNet < handle
                 nIn = [obj.hidVals(:,hidLayers);1];
             end
      
-            obj.out_wsDelta = obj.outNode.updateWeights(nIn, ...
-                                       hotTarget, obj.outVals, obj.alpha);
+            obj.out_wsDelta = obj.outNode.updateWeights(obj.alpha, ...
+                                       hotTarget, obj.outVals, nIn);
             
             
             for i = hidLayers:-1:1
-                hidNode = obj.hidNodes{i,1};
+                hidNode = obj.hidNodes{1,i};
                 if i == hidLayers
                     pDeltas = obj.out_wsDelta;
                 else
@@ -209,12 +295,7 @@ classdef NeuralNet < handle
             
         end
         
-        function err = calcAproxError(obj, pattern, label)
-            obj.calcOutput(pattern);
-            out = obj.outVals;
-            tarVals = label2OneHot(label);
-            err = sum(tarVals .* log(out));
-        end
+        
         
     end
     
@@ -231,13 +312,7 @@ classdef NeuralNet < handle
                 success = false;
             end
         end
-        
-        
-        
-        
-        
-        
-        
+ 
         
         
         function [outputCell] = splitPatterns(~, patterns, labels)

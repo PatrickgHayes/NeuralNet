@@ -6,14 +6,14 @@ classdef OutputMomentumNode < MomentumNode & OutputNodeDecorator
     end
     
     methods
-        function obj = OutputMomentumNode(workNode, beta)
-            obj = obj@MomentumNode(workNode, beta);
-            obj.work_node = workNode;
+        function obj = OutputMomentumNode(outNode, beta)
+            obj = obj@MomentumNode(outNode, beta);
+            obj.out_node = outNode;
         end
         
         %override
-        function updateWeights(obj, alpha)
-            updateWeights@MomentumNode(obj, obj.work_node, alpha);
+        function wsDelta = updateWeights(obj, alpha, tar, out, in)
+            wsDelta = updateWeights@MomentumNode(obj, obj.out_node, alpha, tar, out, in);
         end
     end
     
