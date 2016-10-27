@@ -133,3 +133,4 @@ testNet = NeuralNet(784, 10, 5, 1, ActFuncEnum.Sigmoid, .01, 0, 0);
 testNet.testGradients(images(:,1:5), labels(1:5,1), .01);
 end
 
+
