@@ -6,6 +6,18 @@ classdef Grapher
     end
     
     methods (Static)
+        function graphErrorRate(errorRates, finalIdx, gTitle)
+            errorRates = errorRates(1:finalIdx, 1);
+            epochs = 1:1:size(errorRates,1);
+            figure
+            hold all;
+            plot(epochs, errorRates);
+            xlabel('Epochs');
+            ylabel('Error Rate (Mispredicted/#Characters)');
+            title(gTitle);
+            hold off;
+        end 
+        
         function graphValidationErrorRate(errorRates, finalIdx, gTitle)
             trainningError = errorRates(1:finalIdx, 1);
             validationError = errorRates(1:finalIdx, 2);
@@ -22,16 +34,7 @@ classdef Grapher
             hold off;
         end 
         
-        function graphErrorRate(errorRates, gTitle)
-            epochs = 1:1:size(errorRates,1);
-            figure
-            hold all;
-            plot(epochs, errorRates);
-            xlabel('Epochs');
-            ylabel('Error Rate (Mispredicted/#Characters)');
-            title(gTitle);
-            hold off;
-        end 
+        
         
         function graphActFunctErrorRates(sigmoidError, tanhError, ...
                                          reluError, finalIdxs)
