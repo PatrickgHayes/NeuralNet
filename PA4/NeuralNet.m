@@ -47,10 +47,10 @@ classdef NeuralNet < handle
         %
         % Teaches the neural network over multiple epochs and
         % keeps track of the loss and error rate
-        function [errorRates, finalEpoch] = teach(obj, characters)
+        function errorRates = teach(obj, characters)
             mSize = 10;
             mIncreaseSize = 2;
-            errorRates = zeros(mSize,2);
+            errorRates = zeros(mSize,1);
             epochIdx = 1;
             
             while epochIdx <= obj.epochs
@@ -60,12 +60,9 @@ classdef NeuralNet < handle
                     errorRates(mSize,1) = 0;
                 end
                 
-                obj.teachEpoch(characters)
+                obj.teachEpoch(characters);
                 loss = obj.calcLoss(characters);
-                error = obj.calcErrorRate(characters);
-                
                 errorRates(epochIdx,1) = loss
-                errorRates(epochIdx,2) = error
                 epochIdx = epochIdx + 1;
             end
             
