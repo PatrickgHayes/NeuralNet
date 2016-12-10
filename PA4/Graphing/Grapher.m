@@ -13,7 +13,7 @@ classdef Grapher
             hold all;
             plot(epochs, errorRates);
             xlabel('Epochs');
-            ylabel('Error Rate (Mispredicted/#Characters)');
+            ylabel('Loss');
             title(gTitle);
             hold off;
         end 
